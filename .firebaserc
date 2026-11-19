@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "brochura-colaborativa"
+  },
+  "targets": {
+    "brochura-colaborativa": {
+      "hosting": {
+        "coralGosen": [
+          "coral-gosen-ifaa"
+        ]
+      }
+    }
+  }
+}
