@@ -32,13 +32,14 @@
 </div><div class="divider"></div><h2 class="section-title">Adicionar conteúdo</h2><div class="tools">
 <button class="btn gold" id="addSong">＋ Música no índice</button><button class="btn" id="addText">＋ Página de texto</button>
 <label class="btn file-label">Carregar capa<input class="hidden" type="file" id="coverFile" accept="image/*"></label>
-<label class="btn file-label">Carregar partitura<input class="hidden" type="file" id="scoreFile" accept="application/pdf,image/*"></label>
+<label class="btn file-label">Carregar PDF / partitura<input class="hidden" type="file" id="scoreFile" accept="application/pdf,image/*"></label>
 </div><div id="songEditor" class="hidden"><div class="fields"><div class="field full"><label>Título da música</label><input id="songTitle" placeholder="Título da música"></div><div class="field"><label>Compositor</label><input id="composer" placeholder="Nome do compositor"></div><div class="field"><label>Categoria</label><input id="category" placeholder="Natal, Louvor…"></div></div><div class="tools"><button class="btn gold" id="confirmSong">Adicionar ao índice</button><button class="btn" id="cancelSong">Cancelar</button></div></div>
 <div class="divider"></div><h2 class="section-title" id="indice">♫ Índice musical</h2><div id="songs"><p class="muted">Ainda não existem músicas no índice.</p></div></div>
 <div class="panel" id="paginas" style="margin-top:18px"><h2 class="section-title">▤ Páginas da brochura</h2><div class="tools"><button class="btn" id="refresh">Actualizar pré-visualização</button><button class="btn red" id="deletePage">Eliminar página seleccionada</button></div><div id="pages"><p class="muted">Carregue uma capa, partitura ou página de texto.</p></div></div>
 </section>
 <aside><div class="preview" id="preview"><div class="empty">A brochura aparecerá aqui.<br>Adicione uma capa, índice e partituras.</div></div><div class="side" id="colaboracao" style="margin-top:16px"><h2 class="section-title">♧ Colaboração em tempo real</h2><label for="projectId">Identificador do projecto</label><input id="projectId" value="coral-gosen-2026"><p class="muted">Todos os colaboradores devem usar o mesmo identificador. As alterações são sincronizadas pela base de dados em tempo real.</p><div id="collab" class="muted">A preparar ligação…</div></div></aside></main></div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyD_mcYbf99tQzz3EODpfzq8x9IHGN-OUkY",authDomain:"brochura-colaborativa.firebaseapp.com",databaseURL:"https://brochura-colaborativa-default-rtdb.firebaseio.com",projectId:"brochura-colaborativa",storageBucket:"brochura-colaborativa.firebasestorage.app",messagingSenderId:"461820102280",appId:"1:461820102280:web:0590de52e64b696799413d"};
 let db=null,ref=null,data={meta:{title:"Brochura Musical",subtitle:"Coral Gosen",year:"2026",owner:"Departamento de Música e Coral"},cover:null,songs:[],pages:[]},selected=-1,saveTimer=null,remoteUpdate=false;
@@ -67,7 +68,64 @@ $("refresh").onclick=preview;$("deletePage").onclick=()=>{if(selected<0||!data.p
 $("save").onclick=()=>{readMeta();persist()};$("open").onclick=()=>{if(ref)ref.once("value").then(s=>{if(s.exists()){data=s.val();fillMeta();render();status("Projecto carregado","ok")}else alert("Não existe conteúdo guardado neste projecto.")})};
 function exportWord(){const html='<html><head><meta charset="utf-8"></head><body><h1>'+esc(data.meta.title)+'</h1><h2>'+esc(data.meta.subtitle)+'</h2><p>'+esc(data.meta.owner)+' · '+esc(data.meta.year)+'</p><h2>Índice musical</h2><ol>'+(data.songs||[]).map(s=>'<li>'+esc(s.title)+' — '+esc(s.composer)+'</li>').join("")+'</ol>'+(data.pages||[]).map(p=>'<h2>'+esc(p.title)+'</h2><p>'+esc(p.text||"")+'</p>').join("")+'</body></html>';download(new Blob([html],{type:"application/msword"}),"brochura-coral-gosen.doc")}
 function download(blob,name){const a=document.createElement("a"),u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
-$("word").onclick=exportWord;$("pdf").onclick=()=>window.print();
+$("word").onclick=exportWord;
+async function exportPDF(){
+ const btn=$("pdf");btn.disabled=true;btn.textContent="A preparar PDF…";
+ try{
+  if(!window.PDFLib)throw Error("A biblioteca de criação de PDF não foi carregada. Verifique a ligação à internet.");
+  const {PDFDocument,StandardFonts,rgb}=PDFLib;
+  const out=await PDFDocument.create(),font=await out.embedFont(StandardFonts.Helvetica),bold=await out.embedFont(StandardFonts.HelveticaBold);
+  const W=595.28,H=841.89,margin=42;
+  const drawWrapped=(page,text,x,y,size=12,maxWidth=W-2*margin,face=font)=>{
+   const words=String(text||"").split(/\\s+/);let line="",yy=y;
+   for(const word of words){const test=line?line+" "+word:word;if(face.widthOfTextAtSize(test,size)>maxWidth&&line){page.drawText(line,{x,y:yy,size,font:face,color:rgb(.12,.17,.25)});yy-=size*1.45;line=word}else line=test}
+   if(line)page.drawText(line,{x,y:yy,size,font:face,color:rgb(.12,.17,.25)});
+   return yy-size*1.8;
+  };
+  const addFooter=page=>page.drawText("Coral Gosen · IFAA",{x:margin,y:24,size:8,font,color:rgb(.45,.48,.53)});
+  if(data.cover){
+   const bytes=Uint8Array.from(atob(data.cover.split(",")[1]),c=>c.charCodeAt(0));
+   const img=data.cover.startsWith("data:image/png")?await out.embedPng(bytes):await out.embedJpg(bytes);
+   const p=out.addPage([W,H]),scale=Math.min(W/img.width,H/img.height);
+   p.drawImage(img,{x:(W-img.width*scale)/2,y:(H-img.height*scale)/2,width:img.width*scale,height:img.height*scale});
+  }else{
+   const p=out.addPage([W,H]);p.drawText(data.meta?.title||"Brochura Musical",{x:margin,y:H-180,size:30,font:bold,color:rgb(.04,.15,.30)});
+   p.drawText(data.meta?.subtitle||"Coral Gosen",{x:margin,y:H-225,size:20,font,color:rgb(.62,.43,.12)});
+   p.drawText(String(data.meta?.year||""),{x:margin,y:H-260,size:14,font});
+   p.drawText(data.meta?.owner||"",{x:margin,y:H-290,size:11,font});addFooter(p);
+  }
+  const songs=data.songs||[];
+  if(songs.length){const p=out.addPage([W,H]);let y=H-65;p.drawText("ÍNDICE MUSICAL",{x:margin,y,size:20,font:bold,color:rgb(.62,.43,.12)});y-=42;
+   songs.forEach((song,i)=>{if(y<65){const np=out.addPage([W,H]);y=H-65;np.drawText("ÍNDICE MUSICAL (continuação)",{x:margin,y,size:16,font:bold});y-=35;page=np}
+    const page=out.getPages()[out.getPageCount()-1];page.drawText((i+1)+". "+String(song.title||""),{x:margin,y,size:12,font:bold});y-=18;
+    if(song.composer){page.drawText("Compositor: "+String(song.composer),{x:margin+15,y,size:9,font,color:rgb(.4,.43,.48)});y-=17}
+    if(song.category){page.drawText("Categoria: "+String(song.category),{x:margin+15,y,size:9,font,color:rgb(.4,.43,.48)});y-=17}
+    y-=8;
+   });addFooter(out.getPages()[out.getPageCount()-1]);
+  }
+  for(const item of (data.pages||[])){
+   if(item.type==="pdf"){
+    const raw=Uint8Array.from(atob(item.src.split(",")[1]),c=>c.charCodeAt(0));
+    const src=await PDFDocument.load(raw,{ignoreEncryption:false});
+    const copied=await out.copyPages(src,src.getPageIndices());copied.forEach(p=>out.addPage(p));
+   }else if(item.type==="image"){
+    const raw=Uint8Array.from(atob(item.src.split(",")[1]),c=>c.charCodeAt(0));
+    const img=item.src.startsWith("data:image/png")?await out.embedPng(raw):await out.embedJpg(raw);
+    const p=out.addPage([W,H]),scale=Math.min((W-2*margin)/img.width,(H-2*margin)/img.height);
+    p.drawImage(img,{x:(W-img.width*scale)/2,y:(H-img.height*scale)/2,width:img.width*scale,height:img.height*scale});addFooter(p);
+   }else{
+    const p=out.addPage([W,H]);let y=H-70;
+    p.drawText(String(item.title||"Página de texto"),{x:margin,y,size:20,font:bold,color:rgb(.62,.43,.12)});y-=42;
+    for(const paragraph of String(item.text||"").split("\\n"))y=drawWrapped(p,paragraph,margin,y,12);
+    addFooter(p);
+   }
+  }
+  const bytes=await out.save(),blob=new Blob([bytes],{type:"application/pdf"});
+  download(blob,"brochura-coral-gosen.pdf");status("PDF criado com "+out.getPageCount()+" página(s)","ok");
+ }catch(e){console.error(e);alert("Não foi possível criar o PDF: "+(e.message||e));}
+ finally{btn.disabled=false;btn.textContent="Exportar PDF";}
+}
+$("pdf").onclick=exportPDF;
 window.addEventListener("beforeprint",()=>{document.querySelector(".top").style.position="static";document.querySelector(".side").style.display="none";document.querySelector(".wrap").style.display="block";$("preview").style.display="none"});
 window.addEventListener("afterprint",()=>{document.querySelector(".side").style.display="";document.querySelector(".wrap").style.display="";$("preview").style.display=""});
 render();
