@@ -24,12 +24,12 @@
 <div class="app" id="app">
 <header class="top"><div class="brand"><div class="mini-seal">Jesus</div><div><strong>CORAL GOSEN · IFAA</strong><small>Editor colaborativo de brochuras</small></div></div><div><div class="status" id="status">A ligar à colaboração…</div><div class="actions"><button class="btn dark" id="save">Guardar</button><button class="btn dark" id="open">Abrir</button><button class="btn gold" id="pdf">Exportar PDF</button><button class="btn" id="word">Exportar Word</button></div></div></header>
 <main class="wrap"><nav class="rail" aria-label="Navegação do editor"><a href="#dados"><span class="ico">⌂</span>Projecto</a><a href="#indice"><span class="ico">♫</span>Índice musical</a><a href="#paginas"><span class="ico">▤</span>Páginas</a><a href="#colaboracao"><span class="ico">♧</span>Colaboração</a><a href="#preview"><span class="ico">◉</span>Pré-visualizar</a></nav><section>
-<div class="panel" id="dados"><h2 class="section-title">✎ Dados da brochura</h2><div class="fields">
-<div class="field full"><label for="title">Título</label><input id="title" value="Brochura Musical"></div>
-<div class="field full"><label for="subtitle">Subtítulo / evento</label><input id="subtitle" value="Coral Gosen"></div>
-<div class="field"><label for="year">Ano</label><input id="year" value="2026"></div>
-<div class="field"><label for="owner">Responsável / organização</label><input id="owner" value="Departamento de Música e Coral"></div>
-</div><div class="divider"></div><h2 class="section-title">Adicionar conteúdo</h2><div class="tools">
+<div class="panel" id="dados">
+<div class="hidden" aria-hidden="true">
+<input id="title" value="Brochura Musical"><input id="subtitle" value="Coral Gosen">
+<input id="year" value="2026"><input id="owner" value="Departamento de Música e Coral">
+</div>
+<h2 class="section-title">Adicionar conteúdo à brochura</h2><div class="tools">
 <button class="btn gold" id="addSong">＋ Música no índice</button><button class="btn" id="addText">＋ Página de texto</button>
 <label class="btn file-label">Carregar capa<input class="hidden" type="file" id="coverFile" accept="image/*"></label>
 <label class="btn file-label">Carregar PDF / partitura<input class="hidden" type="file" id="scoreFile" accept="application/pdf,image/*"></label>
