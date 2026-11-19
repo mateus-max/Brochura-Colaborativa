@@ -1,0 +1,12 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "brochuras": {
+      "$projectId": {
+        ".read": true,
+        ".write": true
+      }
+    }
+  }
+}
