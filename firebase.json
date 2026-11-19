@@ -1,8 +1,10 @@
 {
   "hosting": {
+    "target": "coralGosen",
     "public": ".",
     "ignore": [
       "firebase.json",
+      ".firebaserc",
       "**/.*",
       "**/node_modules/**"
     ],
