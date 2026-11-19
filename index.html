@@ -77,7 +77,7 @@ async function exportPDF(){
   const out=await PDFDocument.create(),font=await out.embedFont(StandardFonts.Helvetica),bold=await out.embedFont(StandardFonts.HelveticaBold);
   const W=595.28,H=841.89,margin=42;
   const drawWrapped=(page,text,x,y,size=12,maxWidth=W-2*margin,face=font)=>{
-   const words=String(text||"").split(/\\s+/);let line="",yy=y;
+   const words=String(text||"").split(/\s+/);let line="",yy=y;
    for(const word of words){const test=line?line+" "+word:word;if(face.widthOfTextAtSize(test,size)>maxWidth&&line){page.drawText(line,{x,y:yy,size,font:face,color:rgb(.12,.17,.25)});yy-=size*1.45;line=word}else line=test}
    if(line)page.drawText(line,{x,y:yy,size,font:face,color:rgb(.12,.17,.25)});
    return yy-size*1.8;
@@ -95,13 +95,13 @@ async function exportPDF(){
    p.drawText(data.meta?.owner||"",{x:margin,y:H-290,size:11,font});addFooter(p);
   }
   const songs=data.songs||[];
-  if(songs.length){const p=out.addPage([W,H]);let y=H-65;p.drawText("ÍNDICE MUSICAL",{x:margin,y,size:20,font:bold,color:rgb(.62,.43,.12)});y-=42;
-   songs.forEach((song,i)=>{if(y<65){const np=out.addPage([W,H]);y=H-65;np.drawText("ÍNDICE MUSICAL (continuação)",{x:margin,y,size:16,font:bold});y-=35;page=np}
-    const page=out.getPages()[out.getPageCount()-1];page.drawText((i+1)+". "+String(song.title||""),{x:margin,y,size:12,font:bold});y-=18;
-    if(song.composer){page.drawText("Compositor: "+String(song.composer),{x:margin+15,y,size:9,font,color:rgb(.4,.43,.48)});y-=17}
-    if(song.category){page.drawText("Categoria: "+String(song.category),{x:margin+15,y,size:9,font,color:rgb(.4,.43,.48)});y-=17}
+  if(songs.length){let currentPage=out.addPage([W,H]),y=H-65;currentPage.drawText("ÍNDICE MUSICAL",{x:margin,y,size:20,font:bold,color:rgb(.62,.43,.12)});y-=42;
+   songs.forEach((song,i)=>{if(y<85){currentPage=out.addPage([W,H]);y=H-65;currentPage.drawText("ÍNDICE MUSICAL (continuação)",{x:margin,y,size:16,font:bold});y-=35}
+    currentPage.drawText((i+1)+". "+String(song.title||""),{x:margin,y,size:12,font:bold});y-=18;
+    if(song.composer){currentPage.drawText("Compositor: "+String(song.composer),{x:margin+15,y,size:9,font,color:rgb(.4,.43,.48)});y-=17}
+    if(song.category){currentPage.drawText("Categoria: "+String(song.category),{x:margin+15,y,size:9,font,color:rgb(.4,.43,.48)});y-=17}
     y-=8;
-   });addFooter(out.getPages()[out.getPageCount()-1]);
+   });addFooter(currentPage);
   }
   for(const item of (data.pages||[])){
    if(item.type==="pdf"){
@@ -116,7 +116,7 @@ async function exportPDF(){
    }else{
     const p=out.addPage([W,H]);let y=H-70;
     p.drawText(String(item.title||"Página de texto"),{x:margin,y,size:20,font:bold,color:rgb(.62,.43,.12)});y-=42;
-    for(const paragraph of String(item.text||"").split("\\n"))y=drawWrapped(p,paragraph,margin,y,12);
+    for(const paragraph of String(item.text||"").split("\n"))y=drawWrapped(p,paragraph,margin,y,12);
     addFooter(p);
    }
   }
